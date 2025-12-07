@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OCR Test</title>
+</head>
+<body>
+
+<h2>Upload Image</h2>
+
+<input type="file" id="fileInput" />
+
+<br><br>
+
+<button id="extractBtn">Extract Text</button>
+
+<h3>Extracted Fields</h3>
+
+DOB: <input id="dob"><br><br>
+Phone: <input id="phone"><br><br>
+Pincode: <input id="pincode"><br><br>
+<script>
+let extractedFields = {};
+
+const FIELD_IDS = [
+  "first_name","middle_name","last_name","gender","age","dob",
+  "phone","email","pincode","state","country","address"
+];
+
+// ✅ HARD RESET FUNCTION (used always)
+function resetUI() {
+  extractedFields = {};
+
+  FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  document.getElementById("output").innerHTML = "";
+}
+
+// ✅ UPLOAD & EXTRACT
+document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  const fileInput = document.getElementById("file");
+  if (!fileInput.files.length) {
+    alert("Please select a document");
+    return;
+  }
+
+  // ✅ STEP 1: CLEAR EVERYTHING
+  resetUI();
+
+  // ✅ STEP 2: DISABLE BUTTON (prevent double click)
+  const btn = this.querySelector("button");
+  btn.disabled = true;
+  btn.innerText = "Extracting...";
+
+  // ✅ STEP 3: CREATE FRESH FORM DATA
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+
+  try {
+    const res = await fetch("/extract", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+
+    // ✅ STEP 4: FILL NEW DATA ONLY
+    extractedFields = data.extracted_fields || {};
+
+    FIELD_IDS.forEach(id => {
+      if (extractedFields[id]) {
+        document.getElementById(id).value = extractedFields[id];
+      }
+    });
+
+  } catch (err) {
+    alert("Extraction failed. Check console.");
+    console.error(err);
+  }
+
+  // ✅ STEP 5: RESET BUTTON & FILE INPUT
+  btn.disabled = false;
+  btn.innerText = "Extract Details";
+  fileInput.value = "";
+});
+
+// ✅ VERIFY
+function verifyData() {
+  const userInput = {};
+
+  FIELD_IDS.forEach(id => {
+    userInput[id] = document.getElementById(id)?.value || "";
+  });
+
+  fetch("/verify", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      extracted_fields: extractedFields,
+      user_input: userInput
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const output = document.getElementById("output");
+    output.innerHTML = "";
+
+    const results = data.verification_results || {};
+    for (let field in results) {
+      const r = results[field];
+      const div = document.createElement("div");
+      div.className = "result " + (r.match ? "match" : "mismatch");
+      div.innerHTML = `<b>${field.toUpperCase()}</b> — ${r.confidence}%`;
+      output.appendChild(div);
+    }
+  });
+}
+</script>
+
+
+</body>
+</html>

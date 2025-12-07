@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OCR Identity Extraction & Verification</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin-top: 30px;
+      border-bottom: 2px solid #eee;
+      padding-bottom: 5px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    textarea {
+      grid-column: span 3;
+      resize: vertical;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      background: #007bff;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .result {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+    }
+
+    .match {
+      background: #d4edda;
+      border-left: 6px solid #28a745;
+    }
+
+    .mismatch {
+      background: #f8d7da;
+      border-left: 6px solid #dc3545;
+    }
+
+    footer {
+      margin-top: 25px;
+      text-align: center;
+      color: #777;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>OCR Identity Extraction & Verification</h1>
+
+  <!-- Upload -->
+  <h2>1. Upload Document</h2>
+  <form id="uploadForm">
+    <input type="file" name="file" id="file" required>
+    <button type="submit">Extract Details</button>
+  </form>
+
+  <!-- Extracted Fields -->
+  <h2>2. Extracted Details (Editable)</h2>
+  <div class="grid">
+    <div>
+      <label>First Name</label>
+      <input id="first_name">
+    </div>
+
+    <div>
+      <label>Middle Name</label>
+      <input id="middle_name">
+    </div>
+
+    <div>
+      <label>Last Name</label>
+      <input id="last_name">
+    </div>
+
+    <div>
+      <label>Gender</label>
+      <input id="gender">
+    </div>
+
+    <div>
+      <label>Age</label>
+      <input id="age">
+    </div>
+
+    <div>
+      <label>Date of Birth</label>
+      <input id="dob">
+    </div>
+
+    <div>
+      <label>Phone</label>
+      <input id="phone">
+    </div>
+
+    <div>
+      <label>Email</label>
+      <input id="email">
+    </div>
+
+    <div>
+      <label>Pincode</label>
+      <input id="pincode">
+    </div>
+
+    <div>
+      <label>State</label>
+      <input id="state">
+    </div>
+
+    <div>
+      <label>Country</label>
+      <input id="country">
+    </div>
+
+    <textarea id="address" placeholder="Address"></textarea>
+  </div>
+
+  <button type="button" onclick="verifyData()">Verify Details</button>
+
+  <!-- Verification results -->
+  <h2>3. Verification Result</h2>
+  <div id="output"></div>
+
+  <footer>
+    OCR-powered identity extraction & verification system
+  </footer>
+</div>
+
+<script>
+let extractedFields = {};
+
+document.getElementById("uploadForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const formData = new FormData(this);
+
+  fetch("/extract", {
+    method: "POST",
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => {
+    extractedFields = data.extracted_fields || {};
+
+    for (let key in extractedFields) {
+      const el = document.getElementById(key);
+      if (el) el.value = extractedFields[key];
+    }
+  });
+});
+
+function verifyData() {
+  const userInput = {};
+  const fields = [
+    "first_name","middle_name","last_name","gender","age","dob",
+    "phone","email","pincode","state","country","address"
+  ];
+
+  fields.forEach(f => {
+    userInput[f] = document.getElementById(f)?.value || "";
+  });
+
+  fetch("/verify", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      extracted_fields: extractedFields,
+      user_input: userInput
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    const output = document.getElementById("output");
+    output.innerHTML = "";
+
+    const results = data.verification_results || {};
+    for (let field in results) {
+      const r = results[field];
+      const div = document.createElement("div");
+      div.className = "result " + (r.match ? "match" : "mismatch");
+      div.innerHTML = `<b>${field.toUpperCase()}</b> — Confidence: ${r.confidence}%`;
+      output.appendChild(div);
+    }
+  });
+}
+</script>
+
+</body>
+</html>

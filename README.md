@@ -51,3 +51,18 @@ Verification Result (Confidence %)
 ### 1. Install Python Dependencies
 ```bash
 pip install -r backend/requirements.txt
+
+
+2. Install Tesseract OCR
+
+Windows: https://github.com/UB-Mannheim/tesseract/wiki
+
+Add Tesseract to PATH
+
+3. Run the Application
+python backend/app.py
+
+
+Open browser:
+
+http://localhost:5000
